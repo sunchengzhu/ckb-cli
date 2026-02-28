@@ -279,6 +279,19 @@ fn calculate_mac(ciphertext: &[u8], kdf_key: &[u8; 32]) -> [u8; 32] {
     tiny_keccak::keccak256(&mac_bytes)
 }
 
+/// Constant-time comparison of two byte slices to prevent timing attacks.
+/// Returns true if both slices are equal in length and content.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut result: u8 = 0;
+    for (x, y) in a.iter().zip(b.iter()) {
+        result |= x ^ y;
+    }
+    result == 0
+}
+
 #[derive(Debug, Clone)]
 pub struct Crypto {
     cipher: &'static str,
@@ -335,7 +348,8 @@ impl Crypto {
     }
 
     fn check_password_inner(&self, kdf_key: &[u8; 32]) -> bool {
-        self.mac == calculate_mac(&self.ciphertext, kdf_key)
+        let calculated_mac = calculate_mac(&self.ciphertext, kdf_key);
+        constant_time_eq(&self.mac, &calculated_mac)
     }
 
     pub fn check_password(&self, password: &[u8]) -> Result<bool, Error> {

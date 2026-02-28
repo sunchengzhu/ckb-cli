@@ -768,10 +768,14 @@ impl Key {
                 crypto.ciphertext().len()
             )));
         }
-        let key_vec = crypto.decrypt(password)?;
+        let mut key_vec = crypto.decrypt(password)?;
         let mut key_bytes = [0u8; 64];
         key_bytes[..].copy_from_slice(&key_vec[..]);
+        // Zeroize the decrypted key material from the Vec
+        zeroize_slice(&mut key_vec);
         let master_privkey = MasterPrivKey::from_bytes(key_bytes)?;
+        // Zeroize the intermediate key_bytes array
+        zeroize_slice(&mut key_bytes);
 
         let hash160 = master_privkey.hash160(&[]);
         Ok(Key {
@@ -785,8 +789,10 @@ impl Key {
         let mut buf = Uuid::encode_buffer();
         let id_str = self.id.to_hyphenated().encode_lower(&mut buf);
         let hash160_hex = format!("{:x}", self.hash160);
-        let master_privkey = self.master_privkey.to_bytes();
+        let mut master_privkey = self.master_privkey.to_bytes();
         let crypto = Crypto::encrypt_key_scrypt(&master_privkey, password, scrypt_type);
+        // Zeroize the raw private key bytes after encryption
+        zeroize_slice(&mut master_privkey);
         let ckb_root = self.master_privkey.ckb_root();
         serde_json::json!({
             "origin": KEYSTORE_ORIGIN,
