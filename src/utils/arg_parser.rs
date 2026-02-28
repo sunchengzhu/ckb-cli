@@ -549,16 +549,17 @@ impl ArgParser<Duration> for DurationParser {
         let value: u64 = value_part.parse::<u64>().map_err(|err| err.to_string())?;
         let unit_part = &input_lower[input_lower.len() - 1..input_lower.len()];
         let seconds = match unit_part {
-            "s" => value,
-            "m" => value * 60,
-            "h" => value * 3600,
-            "d" => value * 3600 * 24,
+            "s" => Some(value),
+            "m" => value.checked_mul(60),
+            "h" => value.checked_mul(3600),
+            "d" => value.checked_mul(3600 * 24),
             _ => {
                 return Err(
                     "Please give an unit, {{s: second, m: minute, h: hour, d: day}}".to_owned(),
                 );
             }
-        };
+        }
+        .ok_or_else(|| format!("Duration value too large: {}", value))?;
         Ok(Duration::from_secs(seconds))
     }
 }

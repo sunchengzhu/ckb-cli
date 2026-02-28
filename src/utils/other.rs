@@ -106,9 +106,8 @@ pub fn get_signer(
         )?;
         if data.len() != 65 {
             Err(format!(
-                "Invalid signature data length: {}, data: {:?}",
+                "Invalid signature data length: {}, expected: 65",
                 data.len(),
-                data
             ))
         } else {
             let mut data_bytes = [0u8; 65];
